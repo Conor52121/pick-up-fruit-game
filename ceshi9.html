@@ -1,0 +1,635 @@
+﻿<!--created by chencen -->
+<!--on 2018/1/11-->
+<!--blog cc-fys-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>catch fruit</title>
+    <script type="text/javascript"  src="https://code.jquery.com/jquery-3.4.1.min.js" ></script>
+    <script type="text/javascript" src="./zrender.js"></script>
+</head>
+<div>
+    <div id="myimg" style="display:none">
+        <img src="./images/apple.png"/>
+        <img src="./images/hamigua.png"/>
+        <img src="./images/pineapple.png"/>
+        <img src="./images/strawberry.png"/>
+        <img src="./images/basket.png"/>
+        <img src="./images/redbasket.png"/>
+        <img src="./images/bluebasket.png"/>
+        <img src="./images/greenbasket.png"/>
+        <img src="./images/greybasket.png"/>
+    </div>
+    <div id="fabric" class="example-container" style="border:1px solid black;margin:0 auto"></div>
+</div>
+<style type="text/css">
+    body{
+        margin-left: 0;
+        margin-right: 0;
+        margin-top:0;
+
+    }
+</style>
+
+<body>
+<script>
+
+    $(function () {
+        var mydiv = $("#fabric");
+        var mydiv_resize = function(){
+            $(mydiv).css("width",$(window).width());
+            $(mydiv).css("height",$(window).height());
+        };
+        mydiv_resize();
+        $(window).resize(function(){
+            mydiv_resize();
+        });
+    });
+
+
+    window.onload=function() //窗口初始化
+    {
+        //为了保证图片加载完成
+        var container=document.getElementsByClassName('example-container')[0]; // 获取游戏的div区域对象
+        new CatchFruit(container);  // 新建CatchFruit函数
+    };
+
+    // 红色篮子的分数规则
+    var redrule={
+        apple:10,
+        hamigua:20,
+        pineapple:30,
+        strawberry:40
+    };
+
+    // 蓝色篮子的分数规则
+    var bluerule={
+        apple:10,
+        hamigua:30,
+        pineapple:20,
+        strawberry:30
+    };
+
+    // 绿色篮子的分数规则
+    var greenrule={
+        apple:10,
+        hamigua:30,
+        pineapple:20,
+        strawberry:30
+    };
+
+    // 灰色篮子的分数规则
+    var greyrule={
+        apple:10,
+        hamigua:30,
+        pineapple:20,
+        strawberry:30
+    };
+
+    // CatchFruit函数
+    function CatchFruit(elememt){
+        this.element=elememt;  // 游戏区域为 example-container 的这个Div 
+        this.zr = zrender.init(this.element);  // 初始化Zrender引擎
+        this.w = this.zr.getWidth();  // 获取游戏区域的宽度
+        this.h = this.zr.getHeight(); // 获取游戏区域的高度
+
+        //this.keydown={};  // 按键为空
+
+        // 水果的风格（包括宽度、高度和坐标位置）
+        this.fruitStyle={
+            style: {
+                width:35,
+                height:35,
+                x:0,
+                y:0
+            }
+        };
+
+        // zr生成的背景组
+        this.zrBGGroup=new zrender.Group();
+        this.zrBGGroup.position=[0,0];
+        this.zr.add(this.zrBGGroup);
+
+        // zr水果生成的区域
+        this.zrGroup=new zrender.Group();
+        this.zrGroup.position=[0,40];
+        this.zr.add(this.zrGroup);
+
+        // zr篮子生成的区域
+        this.bottomGroup=new zrender.Group();
+        this.bottomGroup.position=[0,this.h-40];
+        this.zr.add(this.bottomGroup);
+
+        // zr效果生成的区域
+        this.effectGroup=new zrender.Group();
+        this.effectGroup.position=[0,0];
+        this.zr.add(this.effectGroup);
+
+        this.init();
+    }
+
+
+    CatchFruit.prototype={
+
+        constructor: CatchFruit,
+        //初始化
+
+        init: function () {
+            var self=this;
+            // 调用drawBG函数画背景
+            self.drawBG();
+            // 调用bindEvent事件绑定函数
+            self.bindEvent();
+            // 调用updateState更新状态函数
+            self.updateState();
+        },
+
+        //  画游戏背景
+        drawBG:function() {
+
+            var zrBGGroup=this.zrBGGroup;  // 获取背景对象
+            var bottomGroup=this.bottomGroup;  // 获取底部篮子区域对象
+
+            var w=this.w;     // 获取背景区域的宽度
+            var h=this.h;      // 获取背景区域的高度
+
+            // 画整个背景矩形（颜色#37B0FF渐变到颜色#efe3ff）
+            var bg = new zrender.Rect({
+                shape: {
+                    width: w,
+                    height: h
+                },
+                style: {
+                    fill: new zrender.RadialGradient(0.5, -0.1, 1, [
+                        {
+                            offset: 0,
+                            color: '#37B0FF'
+                        },
+                        {
+                            offset: 1,
+                            color: '#efe3ff'
+                        }
+                    ])
+                }
+            });
+            zrBGGroup.add(bg); // 添加背景矩形到背景区域中
+
+            // 画得分区域矩形（颜色#33292f）
+            zrBGGroup.add(new zrender.Rect({
+                shape: {
+                    width: w,
+                    height: 40
+                },
+                style: {
+                    fill:'#33292f'
+                }
+            }));
+
+            // 添加得分提示信息
+            zrBGGroup.add(new zrender.Text({
+                style: {
+                    text:'得分:',
+                    fontSize: '18',
+                    textFill: '#fff'
+                },
+                position: [20, 10]
+            }));
+
+            // 添加得分数值信息
+            this.score=new zrender.Text({
+                style: {
+                    text:'0',
+                    fontSize: '18',
+                    textFill: '#fff'
+                },
+                position: [70, 10]
+            });
+            zrBGGroup.add(this.score);
+
+           // 生成篮子对象数组
+           this.basketnew = new Array();
+
+            //蓝篮子
+            this.blueBasket=new zrender.Image({
+                style: {
+                    image:'images/bluebasket.png',
+                    width:100,
+                    height:40
+                },
+                position:[w/2-100,0]
+            });
+            bottomGroup.add(this.blueBasket);  // 添加篮子1
+
+           //红篮子
+            this.redBasket=new zrender.Image({
+                style: {
+                    image:'images/redbasket.png',
+                    width:100,
+                    height:40
+                },
+                position:[w/2,0]
+            });
+            bottomGroup.add(this.redBasket); // 添加篮子2
+
+            //灰篮子
+            this.greyBasket=new zrender.Image({
+                style: {
+                    image:'images/greybasket.png',
+                    width:100,
+                    height:40
+                },
+                position:[w/2+100,0]
+            });
+            bottomGroup.add(this.greyBasket); // 添加篮子3
+
+            //绿篮子
+            this.greenBasket=new zrender.Image({
+                style: {
+                    image:'images/greenbasket.png',
+                    width:100,
+                    height:40
+                },
+                position:[w/2-200,0]
+            });
+            bottomGroup.add(this.greenBasket); // 添加篮子4
+
+
+
+
+
+        },
+
+        //  更新效果（水果生成和得分变化）
+        updateState:function(){
+
+            var self=this;
+
+            var w = this.w;  // 获取显示区域宽度
+            var h = this.h;
+
+            var score=this.score;  // 获取分值对象
+
+            // 设置一个100毫秒执行一次的定时函数
+            this.myinter=setInterval(function(){
+
+                var zrGroup=self.zrGroup;  // 获取zr水果生成的区域对象
+
+                var redBasket=self.redBasket;
+                var blueBasket=self.blueBasket;
+                var greenBasket=self.greenBasket;
+                var greyBasket=self.greyBasket;
+
+
+
+                var random=Math.floor(Math.random()*100); // Math.random()是令系统随机选取大于等于 0.0 且小于 1.0 的伪随机，用于控制数量
+                var speed=120-random;  // 水果运动速度
+
+                //pos 的范围是-50 ~w-50
+                var pos=Math.random()*w-50; // 水果生成的位置
+
+                switch(random)
+                {
+                    case 0:    //丢草莓
+                        self.throwFruit('strawberry',pos,speed);
+                        break;
+                    case 1:
+                    case 2:    //丢苹果
+                        self.throwFruit('apple',pos,speed);
+                        break;
+                    case 3:
+                    case 4:    //丢菠萝
+                        self.throwFruit('pineapple',pos,speed);
+                        break;
+                    case 5:
+                    case 6:
+                    case 7:
+                    case 8://丢橘子
+                        self.throwFruit('hamigua',pos,speed);
+                        break;
+                }
+
+
+                // 检测及更新显示（第一个篮子获取水果的处理）
+                var redBasketX=redBasket.position[0]; // 获取篮子的位置
+
+                // 对于水果区域的每个水果进行处理
+                zrGroup.eachChild(function(item){
+
+                    var x=item.position[0];  // 获取水果的位置X
+                    var y=item.position[1];  // 获取水果的位置Y
+
+                    //  判断水果是否在篮子的位置(如果水果落到篮子中)
+                    if(y>h-120&& x>redBasketX-15&&x<(redBasketX+100-15))
+                    {
+
+                        var type=item.fType;  // 判断水果的类型
+                        var winScore=greyrule[type];  // 获取水果的分数
+
+                        //  加分
+                        var scoreNOW=Number(score.style.text)+winScore; // 获取分数栏中的成绩，再加上水果的成绩
+
+                        self.scoreEffect(winScore); // 调用加分效果函数（加的分值从屏幕中间，向上逐步消失）
+
+                        score.attr({
+                            style: {
+                                text:scoreNOW
+                            }
+                        });
+
+                        zrGroup.remove(item);  // 让落到篮子中的水果消失
+                    }
+                });
+
+
+
+                // 检测及更新显示（第一个篮子获取水果的处理）
+                var blueBasketX=blueBasket.position[0]; // 获取篮子的位置
+
+                // 对于水果区域的每个水果进行处理
+                zrGroup.eachChild(function(item){
+
+                    var x=item.position[0];  // 获取水果的位置X
+                    var y=item.position[1];  // 获取水果的位置Y
+
+                    //  判断水果是否在篮子的位置(如果水果落到篮子中)
+                    if(y>h-120&& x>blueBasketX-15&&x<(blueBasketX+100-15))
+                    {
+
+                        var type=item.fType;  // 判断水果的类型
+                        var winScore=greyrule[type];  // 获取水果的分数
+
+                        //  加分
+                        var scoreNOW=Number(score.style.text)+winScore; // 获取分数栏中的成绩，再加上水果的成绩
+
+                        self.scoreEffect(winScore); // 调用加分效果函数（加的分值从屏幕中间，向上逐步消失）
+
+                        score.attr({
+                            style: {
+                                text:scoreNOW
+                            }
+                        });
+
+                        zrGroup.remove(item);  // 让落到篮子中的水果消失
+                    }
+                });
+
+
+
+                // 检测及更新显示（第一个篮子获取水果的处理）
+                var greenBasketX=greenBasket.position[0]; // 获取篮子的位置
+
+                // 对于水果区域的每个水果进行处理
+                zrGroup.eachChild(function(item){
+
+                    var x=item.position[0];  // 获取水果的位置X
+                    var y=item.position[1];  // 获取水果的位置Y
+
+                    //  判断水果是否在篮子的位置(如果水果落到篮子中)
+                    if(y>h-120&& x>greenBasketX-15&&x<(greenBasketX+100-15))
+                    {
+
+                        var type=item.fType;  // 判断水果的类型
+                        var winScore=greyrule[type];  // 获取水果的分数
+
+                        //  加分
+                        var scoreNOW=Number(score.style.text)+winScore; // 获取分数栏中的成绩，再加上水果的成绩
+
+                        self.scoreEffect(winScore); // 调用加分效果函数（加的分值从屏幕中间，向上逐步消失）
+
+                        score.attr({
+                            style: {
+                                text:scoreNOW
+                            }
+                        });
+
+                        zrGroup.remove(item);  // 让落到篮子中的水果消失
+                    }
+                });
+
+
+                // 检测及更新显示（第一个篮子获取水果的处理）
+                var greyBasketX=greyBasket.position[0]; // 获取篮子的位置
+
+                // 对于水果区域的每个水果进行处理
+                zrGroup.eachChild(function(item){
+
+                    var x=item.position[0];  // 获取水果的位置X
+                    var y=item.position[1];  // 获取水果的位置Y
+
+                    //  判断水果是否在篮子的位置(如果水果落到篮子中)
+                    if(y>h-120&& x>(greyBasketX-50)&&x<(greyBasketX+50))
+                    {
+
+                        var type=item.fType;  // 判断水果的类型
+                        var winScore=greyrule[type];  // 获取水果的分数
+
+                        //  加分
+                        var scoreNOW=Number(score.style.text)+winScore; // 获取分数栏中的成绩，再加上水果的成绩
+
+                        self.scoreEffect(winScore); // 调用加分效果函数（加的分值从屏幕中间，向上逐步消失）
+
+                        score.attr({
+                            style: {
+                                text:scoreNOW
+                            }
+                        });
+
+                        zrGroup.remove(item);  // 让落到篮子中的水果消失
+                    }
+                });
+
+
+            },100);
+        },
+
+
+        //丢水果
+        throwFruit:function(type,pos,speed){
+
+            var easeType=['linear','quadraticIn','quadraticOut','cubicIn','cubicOut','linear']; // 水果运动轨迹的类型
+
+            var easing=easeType[Math.floor(Math.random()*5)]; // 随机给定运动模式
+
+            var zrGroup=this.zrGroup;  // 获取水果生成区域对象
+
+            var h=this.h;
+            var dur=(h-40)/speed*1000; // 设定动画运动时长（高度-分数栏高度）/速度
+
+            var baseStyle=this.fruitStyle;
+            baseStyle.style.image='images/'+type+'.png'; // 设定水果的图像
+            baseStyle.position=[pos,0];
+
+            var onefruit=new zrender.Image(baseStyle);  // 生成水果对象
+            onefruit.fType=type;
+            zrGroup.add(onefruit);   // 水果对象加入到zrGroup中
+
+            // 水果动画运动设定
+            onefruit.animateTo({
+                position: [pos,h-40],
+                rotation: Math.PI *2
+            }, dur, 0, easing,function(){
+                
+            //结束之后要移除该元素
+             zrGroup.remove(onefruit);  // 移除水果对象
+            });
+        },
+
+        // 加分效果（水果落到篮子中，从屏幕中间动态显示加多少分）
+        scoreEffect:function(winScore){
+
+            var w=this.w;  // 获取宽度
+            var h=this.h;  // 获取高度
+
+            var effectGroup=this.effectGroup; // 获取效果区域
+
+            // 在屏幕中间显示加分对象
+            var addCore=new zrender.Text({
+                style: {
+                    text:'+ '+winScore,
+                    fontSize: '25',
+                    textFill: '#ff5140',
+                    textAlign: 'center'
+                },
+                position: [w/2, h/2]
+            });
+            effectGroup.add(addCore);
+
+            // 加分对象，动画效果，从中心位置运动到[10,10]位置
+            addCore.animateTo({
+                style: {
+                    opacity:0
+                },
+                position: [10, 10]
+            }, 1000, 0, 'linear', function () {
+                effectGroup.remove(addCore); // 取消加分效果
+            });
+        },
+
+        // 绑定事件函数
+        bindEvent:function(){
+            var self=this;  // 获取对象本身
+            var w=this.w;   // 获取宽度
+            var h=this.h;
+            //var w2=this.w;
+            // ------------------------ 触摸事件处理
+            var grey = self.greyBasket; // 第一个篮子
+            var red = self.redBasket;
+            var blue = self.blueBasket;
+            var green = self.greenBasket;
+            var B;
+
+           // 绑定touchstart事件：touchstart:触摸开始的时候触发
+           window.addEventListener("touchstart", function(e) {
+                   // console.log(e);
+                   var touches = e.touches[0];
+
+                   //算距离
+                   var greyBasketD = Math.abs(touches.clientX - grey.position[0]);
+                   var redBasketD = Math.abs(touches.clientX - red.position[0]);
+                   var blueBasketD = Math.abs(touches.clientX - blue.position[0]);
+                   var greenBasketD = Math.abs(touches.clientX - green.position[0]);
+
+                   //冒泡比较
+               var array = [greyBasketD,redBasketD,blueBasketD,greenBasketD]
+               for(var i=0; i<array.length-1; i++){
+                   for(var j=0; j<array.length-i-1; j++){
+                       if(array[j] <= array[j+1]){
+                           var temp = array[j];
+                           array[j] = array[j+1];
+                           array[j+1] = temp;
+                       }
+                   }
+               }
+               var s = array[3];
+               if(s == greyBasketD){
+                   B = self.greyBasket;
+               }else if(s == redBasketD){
+                   B = self.redBasket;
+               }else if(s == blueBasketD){
+                   B = self.blueBasket;
+               }else if(s == greenBasketD){
+                   B = self.greenBasket;
+               }
+
+                   oW = touches.clientX - B.position[0];
+                   oH = touches.clientY - B.position[1];
+                  //阻止页面的滑动默认事件：touchmove:手指在屏幕上滑动式的时候触发
+                  document.addEventListener("touchmove",defaultEvent,false);
+            },false)
+
+            window.addEventListener("touchmove", function(e) {
+                 var touches = e.touches[0];
+                 var oLeft = touches.clientX - oW;
+                 var oTop = touches.clientY - oH;
+
+                     // if((h-40)<=touches.clientY &&touches.clientY<=h){
+                             B.attr({
+                                 position:[oLeft,0]
+                             });
+                         // }
+
+                //边界判断
+                if(oLeft<=-50){
+                    oLeft = -50;
+                    B.attr({
+                        position:[oLeft,0]
+                    });
+                }
+
+                if(oLeft >=w-50){
+                    oLeft = w-50;
+                    B.attr({
+                        position:[oLeft,0]
+                    });
+                }
+
+           //B.style.left = oLeft + "px";
+           //B.style.top = oTop + "px";
+         },false);
+
+        window.addEventListener("touchend",function() {
+        document.removeEventListener("touchmove",defaultEvent,false);
+        },false);
+         function defaultEvent(e) {
+        e.preventDefault();
+         }
+
+
+            window.addEventListener("mousedown", function (e) {
+              grey =self.greyBasket;
+              red = self.redBasket;
+              blue = self.blueBasket;
+              green = self.greenBasket;
+                //var x=B.position[0];
+                // var y=basket.position[1];
+
+
+            }, false);
+        },
+
+        // 销毁Zrender中生成对象
+        dispose:function(){
+
+            var myinter=this.myinter;
+            clearInterval(myinter); // 销毁定时器
+
+            // 销毁背景对象，水果显示区域对象，底部对象，加分效果对象
+            this.zrBGGroup.removeAll();
+            this.zrGroup.removeAll();
+            this.bottomGroup.removeAll();
+            this.effectGroup.removeAll();
+
+            // 销毁Zrender对象
+            var zr = this.zr;
+            zrender.dispose(zr);
+        }
+    };
+
+</script>
+
+</body>
+</html>
