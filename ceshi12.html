@@ -41,14 +41,15 @@
 
 
 
-    window.onload=function() //窗口初始化
+    
+
+    $(function () {
+        window.onload=function() //窗口初始化
     {
         //为了保证图片加载完成
         var container=document.getElementsByClassName('example-container')[0]; // 获取游戏的div区域对象
         new CatchFruit(container);  // 新建CatchFruit函数
     };
-
-    $(function () {
         var mydiv = $("#fabric");
         var mydiv_resize = function(){
             $(mydiv).css("width",$(window).width());
